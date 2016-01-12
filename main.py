@@ -3,6 +3,8 @@ import sys, urllib.robotparser, urllib.request, re
 link = sys.argv[1]
 #link = 'https://www.facebook.com/'
 #link = 'http://edi.iem.pw.edu.pl/~maslowss/test.html'
+#link = 'http://edi.iem.pw.edu.pl/~maslowss/PolitBot/forbid.html'
+
 
 if not (link.startswith("http://") or link.startswith("https://")):
     link = "http://" + link
@@ -28,9 +30,42 @@ if can_browse:
     )
     resp  = urllib.request.urlopen(req)
     site_str = str( resp.read() )
-    links = re.findall('"(https?://.*?)"', site_str )
+
+    if re.findall('meta.*robots.*noindex' ,site_str):
+        print ("Nie indeksujemy strony!")
+
+    if re.findall('meta.*robots.*nofollow' ,site_str):
+        print ("Nie idziemy stąd dalej!!")
+
+    if re.findall('meta.*robots.*none' ,site_str):
+        print ("Nie indeksujemy i nie idziemy dalej!!")
+
+
+
+    wynik = {}
+    #links = re.findall('"(https?://.*?)"', site_str )
     print ("Linki ktore znaleziono : " )
-    print( links )
+    #print( links )
+    #print("Linki posrednie: ")
+    #print (re.findall('(src|href)="(\S+)"', site_str))
+    a = re.findall('(src|href)="(\S+)"', site_str)
+    for x in a:
+        print(x)
+
+    for ref in re.findall('(src|href)="(\S+)"', site_str):
+        ref = ref[1]
+        if ref.startswith('htt'):
+            wynik[ref] = True
+            continue
+        if '.' in ref:
+            continue
+        if ref.startswith('/'):
+            ref = "{0}{1}".format(link , ref)
+            wynik[ref]=True
+
+    for l in wynik.keys():
+        print (l)
+
 
 else:
     print("Nie moze!")
