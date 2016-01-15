@@ -1,5 +1,10 @@
 import sys, urllib.robotparser, urllib.request, re
 
+
+### to being considered:
+### what to do with found links and where and how should they be stored. If everything together, or those to another host in some "higher" dict/set
+
+
 link = sys.argv[1]
 #link = 'https://www.facebook.com/'
 #link = 'http://edi.iem.pw.edu.pl/~maslowss/test.html'
@@ -49,19 +54,29 @@ if can_browse:
     #print("Linki posrednie: ")
     #print (re.findall('(src|href)="(\S+)"', site_str))
     a = re.findall('(src|href)="(\S+)"', site_str)
-    for x in a:
-        print(x)
+
+    #for x in a:
+    #    print(x)
 
     for ref in re.findall('(src|href)="(\S+)"', site_str):
         ref = ref[1]
-        if ref.startswith('htt'):
-            wynik[ref] = True
-            continue
-        if '.' in ref:
-            continue
-        if ref.startswith('/'):
+        if ref.startswith('/'): #it`s link to some sub-site
             ref = "{0}{1}".format(link , ref)
-            wynik[ref]=True
+            if not ref.endswith('.html') and ref.split('/').__len__() > 3 and '.' in  ref.split('/')[ref.split('/').__len__()-1] : #it`s probably css or jpg or whateva; ends up with .../<random>.<sth>
+                continue #ignore it. it`s crap.
+            #print (ref)
+            #if rp.can_fetch('*', ref):
+            wynik[ref] = True
+
+        elif ref.startswith('htt'): #either http or https
+            if not ref.endswith('.html') and ref.split('/').__len__() > 3 and '.' in  ref.split('/')[ref.split('/').__len__()-1] : #it`s probably css or jpg or whateva; ends up with .../<random>.<sth>
+                continue #ignore it. it`s crap.
+
+            wynik[ref]=True #maybe other data structure?
+            continue #everything is done
+
+        if '.' in ref:  # we want to delete all shitty css and jpg`s
+            continue
 
     for l in wynik.keys():
         print (l)
