@@ -13,7 +13,7 @@ link = sys.argv[1]
 
 if not (link.startswith("http://") or link.startswith("https://")):
     link = "http://" + link
-print (link)
+print ('Link z którego wchodzimy :',link)
 
 rp = urllib.robotparser.RobotFileParser()
 rp.set_url(link + 'robots.txt')  #tu wrzuca się hosta w link
@@ -24,8 +24,9 @@ try:
 except Exception:       #catches exception as it can`t open and read non existing robots.txt, so everything is allowed
     #print( "rp.read() nie dziala : (" )
     can_browse = True
-if can_browse:
-    print("Moze!")
+    robots_broken = True
+if  can_browse or robots_broken:
+    #print("Moze!")
     req = urllib.request.Request(
             link,
             data = None,
@@ -45,15 +46,15 @@ if can_browse:
     if re.findall('meta.*robots.*none' ,site_str):
         print ("Nie indeksujemy i nie idziemy dalej!!")
 
+    out_host = {}
+    in_host = {}  # <====== important!! result being initialised here!!!!!!
 
-
-    wynik = {}
-    #links = re.findall('"(https?://.*?)"', site_str )
-    print ("Linki ktore znaleziono : " )
+    #links = re.findall('"(https?://.*?)"', site_str )  #probably will be erased, but don`t have time to look at it, lel
+    #print ("Linki ktore znaleziono : " )
     #print( links )
     #print("Linki posrednie: ")
     #print (re.findall('(src|href)="(\S+)"', site_str))
-    a = re.findall('(src|href)="(\S+)"', site_str)
+    #a = re.findall('(src|href)="(\S+)"', site_str)
 
     #for x in a:
     #    print(x)
@@ -64,25 +65,38 @@ if can_browse:
             ref = "{0}{1}".format(link , ref)
             if not ref.endswith('.html') and ref.split('/').__len__() > 3 and '.' in  ref.split('/')[ref.split('/').__len__()-1] : #it`s probably css or jpg or whateva; ends up with .../<random>.<sth>
                 continue #ignore it. it`s crap.
-            #print (ref)
-            #if rp.can_fetch('*', ref):
-            wynik[ref] = True
+            #print ('>>>>>',ref)
+            if robots_broken:
+                #print("Can fetch! << robots_broken")
+                in_host[ref] = True
+            elif rp.can_fetch('*', ref):
+                #print("Can fetch!")
+                in_host[ref] = True
 
-        elif ref.startswith('htt'): #either http or https
+        elif ref.startswith('htt'): #either http or https; link to other site
             if not ref.endswith('.html') and ref.split('/').__len__() > 3 and '.' in  ref.split('/')[ref.split('/').__len__()-1] : #it`s probably css or jpg or whateva; ends up with .../<random>.<sth>
                 continue #ignore it. it`s crap.
 
-            wynik[ref]=True #maybe other data structure?
+            if ref.startswith(link):
+                in_host[ref] = True
+                continue #don`t want to be added into out links
+            out_host[ref]=True #maybe other data structure?
             continue #everything is done
 
-        if '.' in ref:  # we want to delete all shitty css and jpg`s
-            continue
-
-    for l in wynik.keys():
+    a = 0
+    print('Inside : ')
+    for l in in_host.keys():
         print (l)
+        a+=1
+    print('Ogolem linkow wewnatrz : ',a)
 
-
+    a = 0
+    print('Outside : ')
+    for l in out_host.keys():
+        print (l)
+        a+=1
+    print('Ogolem linkow zewnatrz : ',a)
 else:
     print("Nie moze!")
 
-print(">>>>" + link + "<<<<")
+#print(">>>>" + link + "<<<<")
