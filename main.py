@@ -3,6 +3,14 @@ import sys, urllib.robotparser, urllib.request, re
 #TODO remember about variables that are set as global.
 
 
+
+def check_server_introduction(server_response):
+    #print ('.getheaders()', server_response.getheaders())
+    if server_response.getheader('Server') != 'None' and server_response.getheader('Server') != 'None' and server_response.getheader('Server') != 'None' : #TODO check the rest of headers
+        print ('Ładnie się przedstawia = )')
+
+
+
 def check_robots(host):   #this part has to be reworked
 
     global can_browse
@@ -87,11 +95,12 @@ def get_site_content():
                 base_url,
                 data = None,
                 headers = {
-                 'User-Agent': 'PolitBot ( http://edi.iem.pw.edu.pl/0~maslowss/PolitBot/index.html )',  # gdzies tu sie psuje ; (; przecinki? albo cos z adresem strony, to ostatnio zmieniałem
+                 'User-Agent': 'PolitBot ( http://edi.iem.pw.edu.pl/~maslowss/PolitBot/index.html )',  # gdzies tu sie psuje ; (; przecinki? albo cos z adresem strony, to ostatnio zmieniałem
                 }
         )
         resp  = urllib.request.urlopen(req)
-        #def check_server_introduction() #TODO implement it
+
+        check_server_introduction(resp)
         return str( resp.read() )
     else:
         #print ('Nie moze!')
@@ -115,12 +124,12 @@ def crawl(start_link):
     rp = check_robots(link)
     site_str = get_site_content()
     if look_for_links(site_str): #True if can browse in them. If false then, cant
-        print_links()
+        #print_links()
+        pass
 
     ## TODO look for forms at the page/application?
     ## TODO check if easy/default passwords can give me acces : 3
     ## TODO easy SQL injection, ahh think of it as late todo :D
-
 
 
 ### to being considered:
@@ -132,7 +141,7 @@ def crawl(start_link):
 
 
 link = sys.argv[1]
-link = 'https://www.facebook.com/'
+#link = 'https://www.facebook.com/'
 #link = 'http://edi.iem.pw.edu.pl/~maslowss/test.html'
 #link = 'http://edi.iem.pw.edu.pl/~maslowss/PolitBot/forbid.html'
 #link = 'isod.ee.pw.edu.pl'
