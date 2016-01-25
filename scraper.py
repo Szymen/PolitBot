@@ -5,7 +5,7 @@ import sys, urllib.robotparser, urllib.request, re, threading, time, queue
 
 class Scraper(threading.Thread):
 
-    def __init__(self, start_link , result_queue , ID ):
+    def __init__(self, start_link , result_queue , ID, end_queue ):
         threading.Thread.__init__(self)
         self.ID = ID
         self.start_link = start_link
@@ -19,13 +19,23 @@ class Scraper(threading.Thread):
         self.base_url = ''
         self.result_queue = result_queue
         self.WAIT_TIME = 120 # in secs
+        self.end_queue = end_queue
 
     def run( self ):
         print ('Stworzono scrapera! ID:',self.ID, 'zacznie z : ',self.start_link)
+        if self.start_link == '':
+                ql = threading.Lock
+                ql.acquire()
+                self.end_queue.put(self.ID)
+                ql.release()
         self.set_correct_url(self.start_link)
         self.check_robots(self.base_url)
         self.look_for_links(self.base_url)
         self.send_links()
+        ql = threading.Lock
+        ql.acquire()
+        self.end_queue.put(self.ID)
+        ql.release()
         print('Koniec dzialania scrapera!')
 
     def get_links(self):
@@ -47,7 +57,13 @@ class Scraper(threading.Thread):
             self.can_browse = True #it will be easier and more secure to use it in next "if" so i just set it true. no robots means doors open : )
             self.robots_broken = True
     def send_links(self):
-        print (self.out_host)
+        try:
+            queueLock = threading.Lock()
+            queueLock.acquire()
+            self.result_queue.put( tuple(self.out_host) )
+            queueLock.release()
+        finally:
+            queueLock.release
     def look_for_links(self, site_url):
         #TODO make good meta-tag behavior
         visited = set()
@@ -161,23 +177,3 @@ class Scraper(threading.Thread):
     ## TODO look for forms at the page/application?
     ## TODO check if easy/default passwords can give me acces : 3
     ## TODO easy SQL injection, ahh think of it as late todo :D
-
-
-## GENERAL TODO add request/time limitation <-= goes to master.py
-## givem limit is x/hour ;why not make it other?
-
-
-
-#link = sys.argv[1]
-#link = 'https://www.facebook.com/'
-#link = 'http://edi.iem.pw.edu.pl/~maslowss/test.html'
-#link = 'http://edi.iem.pw.edu.pl/~maslowss/PolitBot/forbid.html'
-#link = 'isod.ee.pw.edu.pl'
-
-#a = Crawler()
-#a.crawl(link)
-#print ('Link z którego wchodzimy :', a.base_url)
-
-
-
-
