@@ -5,7 +5,7 @@ import sys, urllib.robotparser, urllib.request, re, threading, time, queue
 
 class Scraper(threading.Thread):
 
-    def __init__(self, start_link , result_queue , ID, end_queue ):
+    def __init__(self, start_link , result_queue , ID):
         threading.Thread.__init__(self)
         self.ID = ID
         self.start_link = start_link
@@ -19,24 +19,14 @@ class Scraper(threading.Thread):
         self.base_url = ''
         self.result_queue = result_queue
         self.WAIT_TIME = 120 # in secs
-        self.end_queue = end_queue
 
     def run( self ):
         print ('Stworzono scrapera! ID:',self.ID, 'zacznie z : ',self.start_link)
-        if self.start_link == '':
-                ql = threading.Lock
-                ql.acquire()
-                self.end_queue.put(self.ID)
-                ql.release()
         self.set_correct_url(self.start_link)
         self.check_robots(self.base_url)
         self.look_for_links(self.base_url)
         self.send_links()
-        ql = threading.Lock
-        ql.acquire()
-        self.end_queue.put(self.ID)
-        ql.release()
-        print('Koniec dzialania scrapera!')
+        return
 
     def get_links(self):
         return self.in_host
@@ -46,6 +36,10 @@ class Scraper(threading.Thread):
             #print ('Ładnie się przedstawia = )')
             pass
     def check_robots(self, host):   #this part has to be reworked
+        tmp = host
+        host = ''
+        for x in tmp.split('/')[0:3]:
+            host += x + '/'
         rp = urllib.robotparser.RobotFileParser()
         rp.set_url( host + 'robots.txt')  #tu wrzuca się hosta w link
         try:
@@ -57,13 +51,15 @@ class Scraper(threading.Thread):
             self.can_browse = True #it will be easier and more secure to use it in next "if" so i just set it true. no robots means doors open : )
             self.robots_broken = True
     def send_links(self):
-        try:
+        try: ## look at this if send good results
             queueLock = threading.Lock()
             queueLock.acquire()
             self.result_queue.put( tuple(self.out_host) )
             queueLock.release()
         finally:
             queueLock.release
+        #print ('<<<<',self.ID,'>>>> wynik:  ', self.out_host )
+
     def look_for_links(self, site_url):
         #TODO make good meta-tag behavior
         visited = set()
@@ -72,9 +68,10 @@ class Scraper(threading.Thread):
         q._put(site_url)
         while not q.empty():
             url = q._get()
-
-            print('Sciagam kolejna strone : ',url ,'Rozmiar kolejki = ',q._qsize())
+            print('<<',self.ID,'>> Sciagam kolejna strone : ',url ,'Rozmiar kolejki = ',q._qsize())
             visited.add(url)
+            if url.endswith('//'):
+                url = url[:-1] #cut second slash off
             try :
                 str_page =  self.get_site_content(url)
             except Exception:
@@ -106,38 +103,43 @@ class Scraper(threading.Thread):
                    ref = "{0}{1}".format( url , ref)
                    if self.robots_broken:
                     #print("Can fetch! << robots_broken")
-                        if not visited.__contains__(ref):
+                        if not visited.__contains__(ref.split('/')[2]):
                             q._put(ref)
-                            visited.add(ref)
+                            visited.add(ref.split('/')[2])
                    elif self.rp.can_fetch('*', ref):
                         #print("Can fetch!")
-                        if not visited.__contains__(ref):
+                        if not visited.__contains__(ref.split('/')[2]):
                             q._put(ref)
-                            visited.add(ref)
+                            visited.add(ref.split('/')[2])
 
-                elif ref.startswith('htt'): #either http or https; link to other site
+                elif ref.startswith('htt'):  #either http or https; link to other site
                     if not ref.endswith('.html') and ref.split('/').__len__() > 3 and '.' in  ref.split('/')[ref.split('/').__len__()-1] : #it`s probably css or jpg or whateva; ends up with .../<random>.<sth>
                         continue #ignore it. it`s crap.
 
                     if ref.startswith(self.base_url):
-                        if not visited.__contains__(ref):
+                        if not visited.__contains__(ref.split('/')[2]):
                             q._put(ref)
-                            visited.add(ref)
-                        continue #don`t want to be added into out links
+                            visited.add(ref.split('/')[2])
+                            continue #don`t want to be added into out links
 
-                    self.out_host.add(ref)
-                    continue #everything is done
+                    if not self.base_url.split('/')[2] in ref and not ref.split('/')[2] in self.out_host: # it the essential part of link, without http or www
+                        self.out_host.add(ref)
+                        continue #everything is done
 
                 elif ref.endswith('.html'): #another type of links  #dont`t know if this part is working
-                    ref = self.base_url+'/'+ref
-                    if not visited.__contains__(ref):
+                    if ref.startswith('/'):
+                        ref = self.base_url+ref
+                    else:
+                        ref = self.base_url+'/'+ref
+                    if not visited.__contains__(ref.split('/')[2]):
                             q._put(ref)
-                            visited.add(ref)
+                            visited.add(ref.split('/')[2])
     def set_correct_url(self, url):
         if not (url.startswith("http://") or url.startswith("https://")):
             self.base_url = 'http://' + url
         else:
-            self.base_url = url
+                self.base_url = url
+
     def get_site_content( self, site_url ):
         if  self.can_browse or self.robots_broken:
             #print("Moze!")
@@ -167,12 +169,6 @@ class Scraper(threading.Thread):
             print (l)
             a+=1
         print('Ogolem linkow zewnatrz : ',a)
-    def crawl(self, start_link):
-        self.base_url = self.set_correct_url(start_link)
-        self.rp = self.check_robots(start_link)
-        self.look_for_links(self.get_site_content())
-        return self.out_host
-
 
     ## TODO look for forms at the page/application?
     ## TODO check if easy/default passwords can give me acces : 3
